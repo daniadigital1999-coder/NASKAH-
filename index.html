@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gaming Script Console</title>
+    <style>
+        :root {
+            --bg-color: #050a14;
+            --panel-color: #0f172a;
+            --neon-green: #00ff9d;
+            --neon-purple: #bc13fe;
+            --text-color: #f1f5f9;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .console-box {
+            background: var(--panel-color);
+            width: 100%;
+            max-width: 700px;
+            border: 2px solid var(--neon-green);
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 157, 0.2);
+        }
+
+        header {
+            border-bottom: 1px solid var(--neon-green);
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title { color: var(--neon-green); font-weight: bold; text-transform: uppercase; letter-spacing: 2px; }
+        #dateStamp { font-size: 0.8rem; color: var(--neon-purple); }
+
+        input[type="text"] {
+            background: transparent;
+            border: none;
+            border-bottom: 1px solid #334155;
+            color: var(--neon-green);
+            width: 100%;
+            padding: 10px 0;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        textarea {
+            background: #1e293b;
+            border: 1px solid #334155;
+            color: white;
+            width: 100%;
+            height: 400px;
+            padding: 15px;
+            box-sizing: border-box;
+            border-radius: 5px;
+            resize: none;
+            font-size: 1rem;
+            line-height: 1.5;
+            outline: none;
+        }
+
+        textarea:focus { border-color: var(--neon-purple); }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: 0.3s;
+        }
+
+        .btn-download { background: var(--neon-purple); color: white; }
+        .btn-drive { background: var(--neon-green); color: #050a14; }
+        button:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        .status-msg { font-size: 0.7rem; text-align: center; margin-top: 10px; color: #64748b; }
+    </style>
+</head>
+<body>
+
+<div class="console-box">
+    <header>
+        <div class="title">Script Editor v1.0</div>
+        <div id="dateStamp"></div>
+    </header>
+
+    <input type="text" id="scriptTitle" placeholder="JUDUL NASKAH..." oninput="autoSave()">
+    <textarea id="scriptContent" placeholder="Mulai menulis naskah gaming kamu di sini..." oninput="autoSave()"></textarea>
+
+    <div class="controls">
+        <button class="btn-download" onclick="downloadScript()">Download .txt</button>
+        <button class="btn-drive" onclick="shareToDrive()">Share to Drive</button>
+    </div>
+    <div class="status-msg" id="status">Draft tersimpan otomatis di browser</div>
+</div>
+
+<script>
+    // 1. Tanggal Otomatis
+    const now = new Date();
+    const dateFormatted = now.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    document.getElementById('dateStamp').innerText = dateFormatted;
+
+    // 2. Load Data Lama
+    window.onload = () => {
+        document.getElementById('scriptTitle').value = localStorage.getItem('savedTitle') || '';
+        document.getElementById('scriptContent').value = localStorage.getItem('savedContent') || '';
+    };
+
+    // 3. Auto Save ke Browser
+    function autoSave() {
+        localStorage.setItem('savedTitle', document.getElementById('scriptTitle').value);
+        localStorage.setItem('savedContent', document.getElementById('scriptContent').value);
+        document.getElementById('status').innerText = "Menyimpan draft... (" + new Date().toLocaleTimeString() + ")";
+    }
+
+    // 4. Download File
+    function downloadScript() {
+        const title = document.getElementById('scriptTitle').value || "Naskah_Tanpa_Judul";
+        const content = document.getElementById('scriptContent').value;
+        const blob = new Blob([`JUDUL: ${title}\nTANGGAL: ${dateFormatted}\n\n${content}`], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `${title}_${new Date().toISOString().slice(0,10)}.txt`;
+        a.click();
+    }
+
+    // 5. Kirim ke Google Drive (Menggunakan Apps Script yang sama dengan checklist)
+    const urlGas = "MASUKKAN_URL_DEPLOY_APPS_SCRIPT_MU";
+
+    function shareToDrive() {
+        const title = document.getElementById('scriptTitle').value;
+        const content = document.getElementById('scriptContent').value;
+
+        if(!content) return alert("Naskah kosong!");
+
+        const btn = document.querySelector('.btn-drive');
+        btn.innerText = "SENDING...";
+
+        fetch(urlGas, {
+            method: "POST",
+            mode: "no-cors",
+            body: JSON.stringify({
+                goal: "NASKAH: " + title, // Kita pakai parameter 'goal' agar sinkron dengan Apps Script sebelumnya
+                tasks: content,           // Kita masukkan isi naskah ke parameter 'tasks'
+                notes: "Tgl: " + dateFormatted
+            })
+        }).then(() => {
+            alert("Naskah berhasil dikirim ke Google Sheets/Drive!");
+            btn.innerText = "Share to Drive";
+        }).catch(() => {
+            alert("Gagal mengirim.");
+            btn.innerText = "Share to Drive";
+        });
+    }
+</script>
+
+</body>
+</html>
